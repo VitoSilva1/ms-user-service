@@ -1,1 +1,2 @@
-class usuario()
+class usuario:
+    print("Hola")
