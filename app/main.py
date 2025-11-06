@@ -1,7 +1,14 @@
 from fastapi import FastAPI
+from .routers import users
+from .database import Base, engine
 
-app = FastAPI()
+app = FastAPI(title="User Service (MySQL)")
 
-@app.get("/hello")
-def say_hello():
-    return {"mensaje": "¡Hola desde FastAPI en macOS!"}
+# Crea las tablas en la BD si no existen
+Base.metadata.create_all(bind=engine)
+
+app.include_router(users.router)
+
+@app.get("/")
+def root():
+    return {"message": "User Service running with MySQL"}
