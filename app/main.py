@@ -1,14 +1,10 @@
 from fastapi import FastAPI
-from .routers import users
-from .database import Base, engine
+from app.api.routes import users_routes
 
-app = FastAPI(title="User Service (MySQL)")
+app = FastAPI(title="User Service")
 
-# Crea las tablas en la BD si no existen
-Base.metadata.create_all(bind=engine)
-
-app.include_router(users.router)
+app.include_router(users_routes.router)
 
 @app.get("/")
 def root():
-    return {"message": "User Service running with MySQL"}
+    return {"message": "User Service is running"}
