@@ -4,7 +4,7 @@ from app.schemas.user_schema import UserCreate
 from fastapi import HTTPException
 
 def create_user(db: Session, user: UserCreate):
-    new_user = User(full_name=user.full_name, email=user.email, password=user.password)
+    new_user = User(first_name=user.first_name, last_name=user.last_name, email=user.email, password=user.password)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

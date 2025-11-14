@@ -1,7 +1,8 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
 
 class UserBase(BaseModel):
-    full_name: str
+    first_name: str
+    last_name: str
     email: EmailStr
 
 class UserCreate(UserBase):
