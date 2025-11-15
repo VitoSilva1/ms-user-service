@@ -1,11 +1,23 @@
 import time
+
 from fastapi import FastAPI
 from sqlalchemy.exc import OperationalError
+
 from app.api.routes import users_routes
-from app.core.database import Base, engine
+from app.core.database import Base, SessionLocal, engine
+from app.services.user_service import ensure_default_admins
 
 
 app = FastAPI(title="User Service")
+
+
+def seed_admins() -> None:
+    db = SessionLocal()
+    try:
+        ensure_default_admins(db)
+    finally:
+        db.close()
+
 
 @app.on_event("startup")
 def create_tables():
@@ -13,6 +25,7 @@ def create_tables():
     while retries:
         try:
             Base.metadata.create_all(bind=engine)
+            seed_admins()
             break
         except OperationalError:
             retries -= 1
