@@ -16,6 +16,11 @@ class UserCreate(UserBase):
     role: Optional[UserRole] = UserRole.user
 
 
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
 class UserResponse(UserBase):
     id: int
     role: UserRole
@@ -23,11 +28,8 @@ class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+class UserAuthInfo(BaseModel):
+    id: int
+    role: UserRole
 
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+    model_config = ConfigDict(from_attributes=True)
