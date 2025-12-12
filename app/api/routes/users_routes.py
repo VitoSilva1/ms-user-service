@@ -1,13 +1,12 @@
-from datetime import timedelta
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import create_access_token
 from app.schemas import user_schema
-from app.schemas.user_schema import Token, UserCreate, UserLogin, UserResponse
+from app.schemas.user_schema import UserAuthInfo, UserCreate, UserLogin, UserResponse
 from app.services import user_service
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -35,15 +34,27 @@ def register_user(user: user_schema.UserCreate, db: Session = Depends(get_db)):
     return user_service.create_user(db, user)
 
 
-@router.post("/login", response_model=Token)
-def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
+
+@router.post(
+    "/internal/authenticate",
+    response_model=user_schema.UserAuthInfo,
+    include_in_schema=False,
+)
+def internal_authenticate(
+    user_credentials: user_schema.UserLogin,
+    db: Session = Depends(get_db),
+    internal_secret: Optional[str] = Header(default=None, alias="X-Internal-Secret"),
+):
+    if internal_secret != settings.INTERNAL_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Internal authentication key is invalid",
+        )
+
     user = user_service.authenticate_user(db, user_credentials.email, user_credentials.password)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
-
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": str(user.id), "role": user.role.value},
-        expires_delta=access_token_expires,
-    )
-    return Token(access_token=access_token, token_type="bearer")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+    return user
