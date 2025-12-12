@@ -1,15 +1,23 @@
 # ms-user-service
 
-Microservicio responsable de la administración de usuarios (registro, listado y consulta). Todas las operaciones de autenticación fueron movidas a `ms-auth-service`.
+Servicio FastAPI que gestiona el **ciclo de vida de usuarios**: registro, listado, consulta individual y autenticación interna para el resto de microservicios. `ms-auth-service` delega en este servicio la verificación de credenciales.
+
+## Características
+- Persistencia MySQL mediante SQLAlchemy con el modelo `User` (`app/models/user_model.py`).
+- Hash de contraseñas usando `passlib` y roles (`admin`/`user`) vía enumeraciones.
+- Endpoint interno `/users/internal/authenticate` protegido por el header `X-Internal-Secret`.
+- Creación opcional de administradores por defecto (`Admin Jose`, `Admin Victor`) con `ensure_default_admins`.
 
 ## Variables de entorno
 
-- `DATABASE_URL`: cadena de conexión a la base de datos MySQL.
-- `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`: siguen presentes para compatibilidad, pero solamente `SECRET_KEY` es requerida para el hash de contraseñas.
-- `INTERNAL_API_KEY`: clave compartida que utilizan otros microservicios (por ejemplo `ms-auth-service`) para validar credenciales mediante el endpoint interno.
+| Variable | Descripción |
+| --- | --- |
+| `DATABASE_URL` | Cadena de conexión MySQL (por ejemplo `mysql+pymysql://fintrack_admin:password@db:3306/fintrack_db`). |
+| `SECRET_KEY` | Usada para hashear contraseñas (compatibilidad con utilidades compartidas). |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Mantiene compatibilidad con módulos comunes (no se usa directamente aquí). |
+| `INTERNAL_API_KEY` | Clave compartida con `ms-auth-service` para el endpoint interno. |
 
-Ejemplo de `.env` local:
-
+Ejemplo `.env`:
 ```
 DATABASE_URL=mysql+pymysql://fintrack_admin:Vicente5150.@db:3306/fintrack_db
 SECRET_KEY=change-this-secret
@@ -17,25 +25,23 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 INTERNAL_API_KEY=fintruck-internal
 ```
 
-## Endpoints
-
-- `POST /users/user` y `POST /users/register`: crean usuarios nuevos (con validación de correo duplicado en `/register`).
-- `GET /users/`: lista usuarios.
-- `GET /users/{id}`: obtiene un usuario por id.
-- `POST /users/internal/authenticate`: endpoint interno (no documentado en Swagger) que valida las credenciales y retorna el `id` y `role` del usuario cuando el encabezado `X-Internal-Secret` coincide con `INTERNAL_API_KEY`.
-
-Para login utiliza `ms-auth-service` mediante `POST /auth/login`.
-
-## Ejecución local
-
+## Ejecución
 ```bash
-cd ms-user-service
+cd BackendFinTrack/ms-user-service
+pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-O bien con Docker Compose:
-
+Con Docker:
 ```bash
-cd ms-user-service
+cd BackendFinTrack/ms-user-service
 docker compose up --build
 ```
+
+## Endpoints
+- `POST /users/register` / `POST /users/user`: crean usuarios (la ruta `/register` valida correos duplicados).
+- `GET /users/`: lista todos los usuarios.
+- `GET /users/{id}`: devuelve un usuario específico.
+- `POST /users/internal/authenticate`: **uso interno**. Requiere `X-Internal-Secret` con el valor de `INTERNAL_API_KEY` y responde con `{ "id": 1, "role": "admin" }` si las credenciales son válidas.
+
+Para iniciar sesión públicamente usa `ms-auth-service` (`POST /auth/login`), que internamente llamará a este microservicio.
